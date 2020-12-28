@@ -3,6 +3,7 @@ import random
 import itertools
 import numpy as np
 import time
+import pandas as pd
 from collections import Counter
 
 
@@ -24,6 +25,7 @@ def brute_force(states, population, electoral_votes):
             if min_voters_won > voters_won:
                 min_voters_won = voters_won
                 best_combination = [states[ii] for ii in range(len(states)) if outcome[ii]]
+    best_combination.sort()
     return min_voters_won/total_voters, number_checked, best_combination
 
 def generate_order(states, population, electoral_votes):
@@ -59,27 +61,55 @@ def algorithm_1(states, population, electoral_votes):
         number_checked += 1
         electoral_votes_won = np.dot(outcome, electoral_votes_amounts)
         if electoral_votes_won > total_electoral_votes / 2:
-            states_won = [state_dict[electoral_votes_amount][0:multiplicity] for electoral_votes_amount, multiplicity in zip(electoral_votes_amounts, outcome)]
-            states_won = [item for sublist in states_won for item in sublist]
+            # states_won = [state_dict[electoral_votes_amount][0:multiplicity] for electoral_votes_amount, multiplicity in
+            #               zip(electoral_votes_amounts, outcome)]
+            # states_won = [item for sublist in states_won for item in sublist]
+            states_won = [item for electoral_votes_amount, multiplicity in zip(electoral_votes_amounts, outcome)
+                          for item in state_dict[electoral_votes_amount][0:multiplicity]]
+
             voters_won = sum([population[state] / 2 for state in states_won])
             if min_voters_won > voters_won:
                 min_voters_won = voters_won
                 best_combination = states_won
+    best_combination.sort()
     return min_voters_won / total_voters, number_checked, best_combination
 
 
 state_list = list(population.keys())
 
-number_to_consider = 20
+time_brute = list()
+number_checked_brute = list()
+time_algorithm_1 = list()
+number_checked_algorithm_1 = list()
 
-states = random.sample(state_list, number_to_consider)
-now = time.time()
-print(brute_force(states, population, electoral_votes))
-print(f'time for {number_to_consider} states {time.time() - now}')
+numbers_to_consider = [5, 10, 15, 20, 25, 30, 50]
+for number_to_consider in numbers_to_consider:
 
-now = time.time()
-print(algorithm_1(states, population, electoral_votes))
-print(f'time for {number_to_consider} states {time.time() - now}')
+    states = random.sample(state_list, number_to_consider)
+    if number_to_consider <= 20:
+        now = time.time()
+        fraction, number_checked, best_combination = brute_force(states, population, electoral_votes)
+        print(fraction, number_checked, best_combination)
+        time_taken = time.time() - now
+        print(f'time for {number_to_consider} states by brute force {time_taken}\n')
 
-print('hi')
-print('there')
+        time_brute.append(time_taken)
+        number_checked_brute.append(number_checked)
+
+    now = time.time()
+    fraction, number_checked, best_combination = algorithm_1(states, population, electoral_votes)
+    print(fraction, number_checked, best_combination)
+    time_taken = time.time() - now
+    print(f'time for {number_to_consider} states by algorithm 1 {time_taken}\n')
+    time_algorithm_1.append(time_taken)
+    number_checked_algorithm_1.append(number_checked)
+
+df = pd.DataFrame(columns=['number of states', 'number_checked_brute_force', 'time_brute_force', 'number_checked_algorithm_1', 'time_algorithm_1'])
+df['number of states'] = numbers_to_consider
+df['number_checked_brute_force'].iloc[0:len(number_checked_brute)] = number_checked_brute
+df['time_brute_force'].iloc[0:len(time_brute)] = time_brute
+df['number_checked_algorithm_1'] = number_checked_algorithm_1
+df['time_algorithm_1'] = time_algorithm_1
+pd.set_option("display.max_rows", None, "display.max_columns", None)
+print(df)
+df.to_clipboard()
