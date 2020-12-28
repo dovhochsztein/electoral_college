@@ -7,6 +7,7 @@ def convert_df_to_dict(df, key_column, value_column):
         if type(value) == str:
             value = int(value.replace(',', ''))
         output_dict[df[key_column].iloc[ii]] = value
+    return output_dict
 
 population_df = pd.read_csv('input_data/july_2019_population.csv')
 electoral_votes_df = pd.read_csv('input_data/electoral_votes_2020.csv')
