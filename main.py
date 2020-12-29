@@ -14,7 +14,6 @@ def brute_force(states, population, electoral_votes, special_states):
     #         states.remove(special_state)
     #     else:
     #         special_states.pop(special_state)
-
     number_checked = 0
     # vote_results = list()
     total_electoral_votes = sum([electoral_votes[state] for state in states])
