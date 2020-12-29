@@ -1,29 +1,48 @@
-from input_data.import_inputs import population, electoral_votes
+from input_data.import_inputs import population, electoral_votes, maine_districts, nebraska_districts
 import random
 import itertools
 import numpy as np
 import time
 import pandas as pd
+import math
 
 
-def brute_force(states, population, electoral_votes):
+def brute_force(states, population, electoral_votes, special_states):
+
+    # for special_state in special_states.keys():
+    #     if special_state in states:
+    #         states.remove(special_state)
+    #     else:
+    #         special_states.pop(special_state)
+
     number_checked = 0
     # vote_results = list()
     total_electoral_votes = sum([electoral_votes[state] for state in states])
     total_voters = sum([population[state] for state in states])
     min_voters_won = total_voters
     best_combination = None
-    for outcome in itertools.product([True, False], repeat=len(states)):
-        number_checked += 1
-        electoral_votes_won = sum([electoral_votes[states[ii]] for ii in range(len(states)) if outcome[ii]])
-        if electoral_votes_won > total_electoral_votes / 2:
-            voters_won = sum([population[states[ii]] / 2 for ii in range(len(states)) if outcome[ii]])
-            # vote_results.append([outcome, voters_won / total_voters])
-            if min_voters_won > voters_won:
-                min_voters_won = voters_won
-                best_combination = [states[ii] for ii in range(len(states)) if outcome[ii]]
+    best_electoral_votes_won = None
+
+    # for special_state_outcome in itertools.product(1):
+    for special_state_outcome in [0]:
+
+
+        for outcome in itertools.product([True, False], repeat=len(states)):
+            number_checked += 1
+            electoral_votes_won = sum([electoral_votes[states[ii]] for ii in range(len(states)) if outcome[ii]])
+            if electoral_votes_won > total_electoral_votes / 2:
+                voters_won = sum([math.ceil(population[states[ii]] / 2) for ii in range(len(states)) if outcome[ii]])
+                # vote_results.append([outcome, voters_won / total_voters])
+                if min_voters_won > voters_won:
+                    best_electoral_votes_won = electoral_votes_won
+                    min_voters_won = voters_won
+                    best_combination = [states[ii] for ii in range(len(states)) if outcome[ii]]
     best_combination.sort()
-    return min_voters_won/total_voters, number_checked, best_combination
+    print(f'voters won: {min_voters_won} of {total_voters}\nPercentage: {min_voters_won / total_voters}')
+    print(f'number checked: {number_checked}')
+    print(f'combination of states: {best_combination}')
+    print(f'electoral votes won: {best_electoral_votes_won} of {total_electoral_votes}   ({int(math.ceil(total_electoral_votes / 2))} needed)')
+    return min_voters_won/total_voters, number_checked, best_combination, best_electoral_votes_won, total_electoral_votes
 
 
 def generate_order(states, population, electoral_votes):
@@ -40,52 +59,80 @@ def generate_order(states, population, electoral_votes):
     return state_dict
 
 
-def algorithm_1(states, population, electoral_votes):
+def algorithm_1(states, population, electoral_votes, special_states):
     """
     group states by number of ec votes
 
     """
+    total_electoral_votes = sum([electoral_votes[state] for state in states])
+    total_voters = sum([population[state] for state in states])
+
+    new_special_states = special_states.copy()
+    for special_state in special_states.keys():
+        if special_state in states:
+            states.remove(special_state)
+        else:
+            new_special_states.pop(special_state)
+    special_states = new_special_states
+
     state_dict = generate_order(states, population, electoral_votes)
     electoral_votes_amounts = list(state_dict.keys())
     electoral_votes_amounts.sort()
     highest_vote_amount = max(electoral_votes_amounts)
     multiplicities = [len(state_dict[electoral_votes_amount]) for electoral_votes_amount in electoral_votes_amounts]
 
-    total_electoral_votes = sum([electoral_votes[state] for state in states])
-    total_voters = sum([population[state] for state in states])
+
     min_voters_won = total_voters
     best_combination = None
+    best_electoral_votes_won = None
 
     number_checked = 0
     # skipped_1 = 0
     # skipped_2 = 0
-    for outcome in itertools.product(*[range(multiplicity + 1) for multiplicity in multiplicities]):
-        number_checked += 1
-        electoral_votes_won = np.dot(outcome, electoral_votes_amounts)
-        if electoral_votes_won > total_electoral_votes / 2:
-            lowest_vote_total_index = next((i for i, x in enumerate(outcome) if x > 0), None)
-            if electoral_votes_won > total_electoral_votes / 2 + highest_vote_amount:
-                # skipped_1 += 1
-                continue
-            if lowest_vote_total_index is not None:
-                lowest_vote_total = electoral_votes_amounts[lowest_vote_total_index]
-                if electoral_votes_won > total_electoral_votes / 2 + lowest_vote_total:
-                    # skipped_2 += 1
+    special_state_electoral_votes = [len(special_state) for special_state in special_states.values()]
+    special_states_order = {state: list(np.array(list(value))[np.argsort(list(value.values()))])
+                            for state, value in special_states.items()}
+    for special_state_outcome in itertools.product(*[range(len(special_state) + 1) for special_state in special_states.values()]):
+        special_state_electoral_votes_won = sum(special_state_outcome) +\
+                                            2 * np.sum(np.array(special_state_electoral_votes) == np.array(special_state_outcome))
+        special_states_won = {state: districts[0:districts_won] for ((state, districts), districts_won) in zip(special_states_order.items(), special_state_outcome)}
+        special_states_voters_won = sum([math.ceil(special_states[state][district] / 2) for state, districts in special_states_won.items() for district in districts])
+        special_states_won = list(itertools.chain.from_iterable(list(special_states_won.values())))
+        for outcome in itertools.product(*[range(multiplicity + 1) for multiplicity in multiplicities]):
+            number_checked += 1
+            electoral_votes_won = np.dot(outcome, electoral_votes_amounts)
+            if special_state_electoral_votes_won + electoral_votes_won > total_electoral_votes / 2:
+                lowest_vote_total_index = next((i for i, x in enumerate(outcome) if x > 0), None)
+                if special_state_electoral_votes_won + electoral_votes_won > total_electoral_votes / 2 + highest_vote_amount:
+                    # skipped_1 += 1
                     continue
-            states_won = [item for electoral_votes_amount, multiplicity in zip(electoral_votes_amounts, outcome)
-                          for item in state_dict[electoral_votes_amount][0:multiplicity]]
+                if lowest_vote_total_index is not None:
+                    lowest_vote_total = electoral_votes_amounts[lowest_vote_total_index]
+                    if special_state_electoral_votes_won + electoral_votes_won > total_electoral_votes / 2 + lowest_vote_total:
+                        # skipped_2 += 1
+                        continue
+                states_won = [item for electoral_votes_amount, multiplicity in zip(electoral_votes_amounts, outcome)
+                              for item in state_dict[electoral_votes_amount][0:multiplicity]]
 
-            voters_won = sum([population[state] / 2 for state in states_won])
-            if min_voters_won > voters_won:
-                min_voters_won = voters_won
-                best_combination = states_won
+                voters_won = sum([math.ceil(population[state] / 2) for state in states_won])
+                if min_voters_won > special_states_voters_won + voters_won:
+                    best_electoral_votes_won = special_state_electoral_votes_won + electoral_votes_won
+                    min_voters_won = special_states_voters_won + voters_won
+                    best_combination = special_states_won + states_won
     best_combination.sort()
     # print(skipped_1)
     # print(skipped_2)
-    return min_voters_won / total_voters, number_checked, best_combination
+    print(f'voters won: {min_voters_won} of {total_voters}\nPercentage: {min_voters_won / total_voters}')
+    print(f'number checked: {number_checked}')
+    print(f'combination of states: {best_combination}')
+    print(f'electoral votes won: {best_electoral_votes_won} of {total_electoral_votes}   ({int(math.ceil(total_electoral_votes / 2))} needed)')
+    return min_voters_won / total_voters, number_checked, best_combination, best_electoral_votes_won, total_electoral_votes
 
 
 state_list = list(population.keys())
+
+special_states = {'Maine': maine_districts,
+                  'Nebraska': nebraska_districts}
 
 time_brute = list()
 number_checked_brute = list()
@@ -93,14 +140,23 @@ time_algorithm_1 = list()
 number_checked_algorithm_1 = list()
 
 numbers_to_consider = [5, 10, 15, 20, 25, 30, 50]
-# numbers_to_consider = [5, 10, 15, 20, 25, 30]
+numbers_to_consider = [5, 6, 7, 8, 9, 10, 15, 20, 25, 27]
 for number_to_consider in numbers_to_consider:
 
     states = random.sample(state_list, number_to_consider)
+    if 'Nebraska' not in states:
+        states[0] = 'Nebraska'
+    if 'Maine' not in states:
+        states[1] = 'Maine'
     if number_to_consider <= 20:
         now = time.time()
-        fraction, number_checked, best_combination = brute_force(states, population, electoral_votes)
-        print(fraction, number_checked, best_combination)
+        fraction, number_checked, best_combination, electoral_votes_won,\
+        total_electoral_votes = brute_force(states,
+                                            population,
+                                            electoral_votes,
+                                            special_states)
+        # print(fraction, number_checked, best_combination)
+        # print(f'won {electoral_votes_won} of {total_electoral_votes}')
         time_taken = time.time() - now
         print(f'time for {number_to_consider} states by brute force: {time_taken}\n')
 
@@ -108,8 +164,13 @@ for number_to_consider in numbers_to_consider:
         number_checked_brute.append(number_checked)
 
     now = time.time()
-    fraction, number_checked, best_combination = algorithm_1(states, population, electoral_votes)
-    print(fraction, number_checked, best_combination)
+    fraction, number_checked, best_combination, electoral_votes_won,\
+    total_electoral_votes = algorithm_1(states,
+                                       population,
+                                       electoral_votes,
+                                       special_states)
+    # print(fraction, number_checked, best_combination)
+    # print(f'won {electoral_votes_won} of {total_electoral_votes}')
     time_taken = time.time() - now
     print(f'time for {number_to_consider} states by algorithm 1: {time_taken}\n')
     time_algorithm_1.append(time_taken)
