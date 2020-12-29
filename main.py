@@ -131,54 +131,57 @@ def algorithm_1(states, population, electoral_votes, special_states):
 
 state_list = list(population.keys())
 
-special_states = {'Maine': maine_districts,
-                  'Nebraska': nebraska_districts}
-
 time_brute = list()
 number_checked_brute = list()
 time_algorithm_1 = list()
 number_checked_algorithm_1 = list()
 
-numbers_to_consider = [5, 10, 15, 20, 25, 30, 50]
-numbers_to_consider = [5, 6, 7, 8, 9, 10, 15, 20, 25, 27]
+numbers_to_consider = [5, 10, 15, 20, 25, 30, 51]
+numbers_to_consider = [5, 6, 7, 8, 9, 10, 15, 20, 51]
 for number_to_consider in numbers_to_consider:
-
     states = random.sample(state_list, number_to_consider)
-    if 'Nebraska' not in states:
-        states[0] = 'Nebraska'
-    if 'Maine' not in states:
-        states[1] = 'Maine'
-    if number_to_consider <= 20:
+    for special_states in [{}, {'Maine': maine_districts,
+                                'Nebraska': nebraska_districts}]:
+
+        # special_states = {'Maine': maine_districts,
+        #                   'Nebraska': nebraska_districts}
+
+        if 'Nebraska' not in states:
+            states[0] = 'Nebraska'
+        if 'Maine' not in states:
+            states[1] = 'Maine'
+
+        if number_to_consider <= 10:
+            now = time.time()
+            fraction, number_checked, best_combination, electoral_votes_won,\
+            total_electoral_votes = brute_force(states,
+                                                population,
+                                                electoral_votes,
+                                                special_states)
+            # print(fraction, number_checked, best_combination)
+            # print(f'won {electoral_votes_won} of {total_electoral_votes}')
+            time_taken = time.time() - now
+            print(f'time for {number_to_consider} states by brute force: {time_taken}\n')
+
+            time_brute.append(time_taken)
+            number_checked_brute.append(number_checked)
+
         now = time.time()
         fraction, number_checked, best_combination, electoral_votes_won,\
-        total_electoral_votes = brute_force(states,
-                                            population,
-                                            electoral_votes,
-                                            special_states)
+        total_electoral_votes = algorithm_1(states,
+                                           population,
+                                           electoral_votes,
+                                           special_states)
         # print(fraction, number_checked, best_combination)
         # print(f'won {electoral_votes_won} of {total_electoral_votes}')
         time_taken = time.time() - now
-        print(f'time for {number_to_consider} states by brute force: {time_taken}\n')
-
-        time_brute.append(time_taken)
-        number_checked_brute.append(number_checked)
-
-    now = time.time()
-    fraction, number_checked, best_combination, electoral_votes_won,\
-    total_electoral_votes = algorithm_1(states,
-                                       population,
-                                       electoral_votes,
-                                       special_states)
-    # print(fraction, number_checked, best_combination)
-    # print(f'won {electoral_votes_won} of {total_electoral_votes}')
-    time_taken = time.time() - now
-    print(f'time for {number_to_consider} states by algorithm 1: {time_taken}\n')
-    time_algorithm_1.append(time_taken)
-    number_checked_algorithm_1.append(number_checked)
+        print(f'time for {number_to_consider} states by algorithm 1: {time_taken}\n')
+        time_algorithm_1.append(time_taken)
+        number_checked_algorithm_1.append(number_checked)
 
 df = pd.DataFrame(columns=['number of states', 'number_checked_brute_force', 'time_brute_force',
                            'number_checked_algorithm_1', 'time_algorithm_1'])
-df['number of states'] = numbers_to_consider
+df['number of states'] = [kk for jj in [[ii, ii] for ii in numbers_to_consider] for kk in jj]
 df['number_checked_brute_force'].iloc[0:len(number_checked_brute)] = number_checked_brute
 df['time_brute_force'].iloc[0:len(time_brute)] = time_brute
 df['number_checked_algorithm_1'] = number_checked_algorithm_1
