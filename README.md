@@ -9,4 +9,4 @@ but what about with the US states as they currently are? with disproportionate n
 
 here is an algorithm to efficiently test all possibilities and find the best outcome (2019 population data)
 
-the best solution is `21.7% of the votes. An image generated from 270towin.com shows the solution
+the best solution is ~21.7% of the votes. An image generated from 270towin.com shows the solution
