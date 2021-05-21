@@ -8,3 +8,5 @@ i.e. winning just over half the states with just over half the votes in each and
 but what about with the US states as they currently are? with disproportionate number of votes, what's the least you can get and still win?
 
 here is an algorithm to efficiently test all possibilities and find the best outcome (2019 population data)
+
+the best solution is `21.7% of the votes. An image generated from 270towin.com shows the solution
